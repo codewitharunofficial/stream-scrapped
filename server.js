@@ -142,20 +142,20 @@ app.get("/generate-link", async (req, res) => {
 
       const link = links[links.length - 1].link;
 
-      // if (link) {
-      //   const videoLink = await generateLink(link);
+      if (link) {
+        const videoLink = await generateLink(link);
 
-      //   if (videoLink) {
-      //     res.write(JSON.stringify({ link: videoLink }));
-      //     res.end();
-      //   }
-      // }
+        if (videoLink) {
+          // res.write(JSON.stringify({ link: videoLink }));
+          // res.end();
+          res.status(200).send({
+            success: true,
+            description: description,
+            link: videoLink,
+          });
+        }
+      }
 
-      res.status(200).send({
-        success: true,
-        description: description,
-        link: links[links.length - 1].link,
-      });
     }
   } catch (error) {
     console.error("Error during scraping:", error);
