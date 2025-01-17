@@ -469,12 +469,14 @@ app.get("/keep-alive", async (req, res) => {
   res.status(200).send({ success: true });
 });
 
-cron.schedule("* * * * *", () => {
-  try {
-    console.log("Server Is Alive");
-  } catch (error) {
-    console.log(error);
-  }
+cron.schedule("*/5 * * * *", async () => {
+  await fetch("https://stream-scrapped.onrender.com/keep-alive")
+    .then((res) => {
+      console.log("Server is Alive", res);
+    })
+    .catch((err) => {
+      console.log("Error while keeping server alive! ", err);
+    });
 });
 
 // Start the server
