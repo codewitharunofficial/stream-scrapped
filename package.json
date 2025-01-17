@@ -1,7 +1,7 @@
 {
   "name": "stream-app",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "serverjs",
   "type": "module",
   "scripts": {
     "start": "nodemon server.js"
