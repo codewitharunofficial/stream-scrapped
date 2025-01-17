@@ -1,5 +1,5 @@
 import express from "express";
-import https from "https"
+import https from "https";
 import { load } from "cheerio";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
@@ -112,9 +112,9 @@ app.get("/generate-link", async (req, res) => {
     // Close the browser
     await browser.close();
 
-    res.setHeader("Content-Type", "application/json");
-    res.setHeader("Transfer-Encoding", "chunked");
-    res.status(200);
+    // res.setHeader("Content-Type", "application/json");
+    // res.setHeader("Transfer-Encoding", "chunked");
+    // res.status(200);
 
     // Load HTML into Cheerio for parsing (you can continue with your scraping logic here)
     if (html) {
@@ -136,26 +136,26 @@ app.get("/generate-link", async (req, res) => {
         });
       });
 
-      if (description) {
-        res.write(JSON.stringify({ description: description }));
-      }
+      // if (description) {
+      //   res.write(JSON.stringify({ description: description }));
+      // }
 
       const link = links[links.length - 1].link;
 
-      if (link) {
-        const videoLink = await generateLink(link);
+      // if (link) {
+      //   const videoLink = await generateLink(link);
 
-        if (videoLink) {
-          res.write(JSON.stringify({ link: videoLink }));
-          res.end();
-        }
-      }
+      //   if (videoLink) {
+      //     res.write(JSON.stringify({ link: videoLink }));
+      //     res.end();
+      //   }
+      // }
 
-      // res.status(200).send({
-      //   success: true,
-      //   description: description,
-      //   link: links[links.length - 1].link,
-      // });
+      res.status(200).send({
+        success: true,
+        description: description,
+        link: links[links.length - 1].link,
+      });
     }
   } catch (error) {
     console.error("Error during scraping:", error);
