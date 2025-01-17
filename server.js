@@ -3,6 +3,7 @@ import https from "https";
 import { load } from "cheerio";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
+import cron from "node-cron";
 
 const app = express();
 
@@ -155,7 +156,6 @@ app.get("/generate-link", async (req, res) => {
           });
         }
       }
-
     }
   } catch (error) {
     console.error("Error during scraping:", error);
@@ -464,6 +464,18 @@ async function FinalLink(url) {
     console.log(error);
   }
 }
+
+app.get("/keep-alive", async (req, res) => {
+  res.status(200).send({ success: true });
+});
+
+cron.schedule("* * * * *", () => {
+  try {
+    console.log("Server Is Alive");
+  } catch (error) {
+    console.log(error);
+  }
+});
 
 // Start the server
 app.listen(PORT, () => {
