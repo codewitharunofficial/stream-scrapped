@@ -125,6 +125,7 @@ app.get("/generate-link", async (req, res) => {
         .text()
         .trim()
         .replaceAll("MoviesMod Team · Powered by MoviesMod", "codewitharun");
+  
 
       const links = [];
 
@@ -151,8 +152,11 @@ app.get("/generate-link", async (req, res) => {
           // res.end();
           res.status(200).send({
             success: true,
-            description: description,
-            link: videoLink,
+            video: {
+              description: description,
+              links: links,
+              url: videoLink
+            }
           });
         }
       }
@@ -321,11 +325,18 @@ async function getDownloadLink(url) {
       }
     });
 
+    await page.waitForSelector("a.btn", {
+      visible: true,
+    });
     // await page.screenshot({ path: "newPage.png" });
 
-    await page.waitForSelector("a.btn", { visible: true });
+    await page.$$eval("a.btn", (element) => {
+      console.log(element[1].getAttribute("href"));
 
-    await page.click("a.btn");
+      element.map((el) => console.log(el.className));
+    });
+
+    await page.click("a.btn.btn-warning");
 
     // const cookies = await browser.cookies();
 
@@ -333,7 +344,9 @@ async function getDownloadLink(url) {
 
     const $ = load(newHtml);
 
-    const link = $("a.btn").attr("href");
+    const link = $("a.btn.btn-warning").attr("href");
+
+    console.log("Link: ", link);
 
     if (link) {
       const videoLink = await FinalLink(link);
@@ -345,8 +358,10 @@ async function getDownloadLink(url) {
   }
 }
 
-async function FinalLink(url) {
+async function FinalLink(link) {
   try {
+    const url = `https://driveleech.org${link}`;
+
     const browser = await puppeteer.launch({
       args: chromium.args,
       executablePath: await chromium.executablePath(),
@@ -401,49 +416,51 @@ async function FinalLink(url) {
 
     // await page.waitForSelector('div', {visible: true});
 
-    await page.evaluate(() => {
-      const elems = document.getElementsByName("div");
-      console.log(elems);
-    });
+    // await page.evaluate(() => {
+    //   const elems = document.getElementsByName("div");
+    //   console.log(elems);
+    // });
 
-    await page.click("div#generate");
+    await page.waitForSelector("a.btn.btn-success", { visible: true });
+
+    // await page.click("div#generate");
 
     console.log("Clicked Initial");
 
-    await page.waitForSelector("button#ins", { visible: true });
+    // await page.waitForSelector("button#ins", { visible: true });
 
-    await page.evaluate(() => {
-      document.getElementById("ins").click();
-    });
+    // await page.evaluate(() => {
+    //   document.getElementById("ins").click();
+    // });
 
-    while (true) {
-      const isDisabled = await page.evaluate(() => {
-        const button = document.querySelector('button[id="ins"]');
-        return button ? button.getAttribute("disabled") : null;
-      });
+    // while (true) {
+    //   const isDisabled = await page.evaluate(() => {
+    //     const button = document.querySelector('button[id="ins"]');
+    //     return button ? button.getAttribute("disabled") : null;
+    //   });
 
-      if (isDisabled === "") {
-        // await page.screenshot({ path: "beforClick.png" });
-        console.log("Button is Enabled");
-        await randomDelays(1000, 2000);
-        await page.evaluate(() => {
-          document.getElementById("ins").click();
-        });
-        await randomDelays(3000, 5000);
-        break;
-      } else {
-        // await page.screenshot({ path: "beforClick.png" });
+    //   if (isDisabled === "") {
+    //     // await page.screenshot({ path: "beforClick.png" });
+    //     console.log("Button is Enabled");
+    //     await randomDelays(1000, 2000);
+    //     await page.evaluate(() => {
+    //       document.getElementById("ins").click();
+    //     });
+    //     await randomDelays(3000, 5000);
+    //     break;
+    //   } else {
+    //     // await page.screenshot({ path: "beforClick.png" });
 
-        await page.evaluate(() => {
-          const elems = document.getElementsByName("div");
-          // elems;
-          console.log(elems);
-        });
-        await page.click("div#generate");
+    //     await page.evaluate(() => {
+    //       const elems = document.getElementsByName("div");
+    //       // elems;
+    //       console.log(elems);
+    //     });
+    //     await page.click("div#generate");
 
-        await randomDelays(3000, 5000);
-      }
-    }
+    //     await randomDelays(3000, 5000);
+    //   }
+    // }
 
     // await page.evaluate(() => {
     //   const href = await window
@@ -453,9 +470,12 @@ async function FinalLink(url) {
 
     const html = await page.content();
 
-    // const $ = load(html);
+    const $ = load(html);
 
     // console.log($("div#generate").html());
+
+    videoUrl = $("a.btn.btn-success").attr("href");
+    console.log("VideoLink: ", videoUrl);
 
     await page.close();
 
