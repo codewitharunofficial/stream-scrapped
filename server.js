@@ -15,61 +15,114 @@ const PORT = process.env.PORT || 3001;
 // app.use(express.urlencoded({extended: true}));
 
 // Define the route to stream video
-app.get("/stream", (req, res) => {
+app.get("/get-series", async (req, res) => {
   try {
-    const { url } = req.query;
-    console.log(url); // Remote video URL
-    const range = req.headers.range;
+    console.log("Okay Starting...!");
+    const { slug } = req.query;
+    const episode = req.query?.episode ? req.query?.episode : 1;
+    const url = `https://uhdmovies.bet/${slug}`;
 
-    if (!range) {
-      res.status(400).send("Range header required");
-      return;
-    }
+    // Launch Puppeteer with the chromium binary provided by chrome-aws-lambda
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.args,
+    });
 
-    const parts = range.replace(/bytes=/, "").split("-");
-    const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : undefined;
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    );
+    await page.setExtraHTTPHeaders({
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      Referer: "https://google.com",
+      "Accept-Language": "en-US,en;q=0.9",
+    });
 
-    // Get video info using HEAD request to determine content length
-    https
-      .get(url, { method: "HEAD" }, (headRes) => {
-        const fileSize = parseInt(headRes.headers["content-length"], 10);
-        const chunkEnd =
-          end !== undefined ? Math.min(end, fileSize - 1) : fileSize - 1;
-        const chunkSize = chunkEnd - start + 1;
+    // await page.setViewport({ width: 1920, height: 1000 });
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    // await new Promise((resolve) => setTimeout(resolve, 15000));
 
-        res.writeHead(206, {
-          "Content-Range": `bytes ${start}-${chunkEnd}/${fileSize}`,
-          "Accept-Ranges": "bytes",
-          "Content-Length": chunkSize,
-          "Content-Type": headRes.headers["content-type"] || "video/mp4",
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
+    // await page.waitForNavigation({waitUntil: "networkidle0"});
+    // console.log("Response status:", page.st);
+    // await page.screenshot({ path: "uhdmovies_home.png" });
+
+    // Get the page content as HTML
+    const html = await page.content();
+
+    // Close the browser
+    await browser.close();
+
+    // res.setHeader("Content-Type", "application/json");
+    // res.setHeader("Transfer-Encoding", "chunked");
+    // res.status(200);
+
+    // Load HTML into Cheerio for parsing (you can continue with your scraping logic here)
+    if (html) {
+      const $ = load(html);
+
+      const description = $("p")
+        .text()
+        .trim()
+        .replaceAll("MoviesMod Team · Powered by MoviesMod", "codewitharun");
+
+      const episodes = [];
+
+      $("div.entry-content")
+        .children("p[style='text-align: center;']")
+        .each((x, element) => {
+          // console.log($(el).has("a.maxbutton-2.maxbutton.maxbutton-gdrive-episode").length);
+          if ($(element).has("strong").text().trim()) {
+            // const season = $(element).has("strong").text().trim();
+            $(element)
+              .next()
+              .children()
+              .each((i, el) => {
+                if (
+                  $(el).hasClass(
+                    "maxbutton-2 maxbutton maxbutton-gdrive-episode"
+                  )
+                ) {
+                  const href = $(el).attr("href");
+                  const title = $(el).children("span.mb-text").text().trim();
+                  const episode = $(el)
+                    .children("span.mb-text")
+                    .text()
+                    .trim()
+                    .split(" ")[1];
+                  const season = $(element).has("strong").text().trim();
+                  // console.log(season);
+                  episodes.push({
+                    season: season,
+                    title: title,
+                    link: href,
+                    episode: parseInt(episode),
+                  });
+                }
+              });
+          }
+          
         });
 
-        // Stream the video chunk
-        https
-          .get(
-            url,
-            { headers: { Range: `bytes=${start}-${chunkEnd}` } },
-            (streamRes) => {
-              streamRes.pipe(res);
-              streamRes.on("error", (err) => {
-                console.error("Error while streaming:", err);
-                res.status(500).end("Error while streaming video");
-              });
-            }
-          )
-          .on("error", (err) => {
-            console.error("Error requesting video chunk:", err);
-            res.status(500).end("Error requesting video chunk");
-          });
-      })
-      .on("error", (err) => {
-        console.error("Error fetching video info:", err);
-        res.status(500).send("Error fetching video info");
+
+      res.status(200).send({
+        success: true,
+        video: {
+          description: description,
+          episodes: episodes,
+        },
       });
+    }
   } catch (error) {
-    console.error("Unexpected error:", error);
-    res.status(500).send({ success: false, error: error.message });
+    console.error("Error during scraping:", error);
+    res.status(500).json({
+      success: false,
+      message: "Something went wrong",
+      error: error.message,
+    });
   }
 });
 
@@ -125,7 +178,6 @@ app.get("/generate-link", async (req, res) => {
         .text()
         .trim()
         .replaceAll("MoviesMod Team · Powered by MoviesMod", "codewitharun");
-  
 
       const links = [];
 
@@ -155,8 +207,8 @@ app.get("/generate-link", async (req, res) => {
             video: {
               description: description,
               links: links,
-              url: videoLink
-            }
+              url: videoLink,
+            },
           });
         }
       }
@@ -281,6 +333,7 @@ async function generateLink(url) {
     }
   } catch (error) {
     console.log(error);
+    return error;
     // res.status(500).send({ success: false, error: error });
   }
 }
@@ -355,6 +408,7 @@ async function getDownloadLink(url) {
     }
   } catch (error) {
     console.log(error);
+    return;
   }
 }
 
@@ -482,6 +536,7 @@ async function FinalLink(link) {
     return videoUrl;
   } catch (error) {
     console.log(error);
+    return error;
   }
 }
 
