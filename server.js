@@ -1,20 +1,21 @@
 import express from "express";
-import https from "https";
+import http from "http";
 import { load } from "cheerio";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
 import cron from "node-cron";
+import { Server } from "socket.io";
+import DownloadLink from "./Controllers/Series/getDownloadLink.js";
 
 const app = express();
+
+const server = http.createServer(app);
+
+const io = new Server(server);
 
 // Set the port to listen on (use process.env.PORT for Heroku)
 const PORT = process.env.PORT || 3001;
 
-// app.use(express.json());
-
-// app.use(express.urlencoded({extended: true}));
-
-// Define the route to stream video
 app.get("/get-series", async (req, res) => {
   try {
     console.log("Okay Starting...!");
@@ -104,9 +105,7 @@ app.get("/get-series", async (req, res) => {
                 }
               });
           }
-          
         });
-
 
       res.status(200).send({
         success: true,
@@ -123,6 +122,116 @@ app.get("/get-series", async (req, res) => {
       message: "Something went wrong",
       error: error.message,
     });
+  }
+});
+
+app.get("/get-series-link", async (req, res) => {
+  try {
+    const { url } = req.query;
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.args,
+    });
+
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    );
+    await page.setExtraHTTPHeaders({
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      Referer: "https://www.google.com",
+      "Accept-Language": "en-US,en;q=0.9",
+    });
+
+    // await page.setViewport({ width: 1920, height: 1000 });
+    await page.goto(url, { waitUntil: "networkidle2" });
+    await page.setRequestInterception(true);
+
+    page.on("request", (request) => {
+      const blockedResources = ["doubleclick.net", "adservice.google.com"];
+      if (blockedResources.some((url) => request.url().includes(url))) {
+        // console.log("Blocked Ad: ", request.url());
+        request.abort();
+      } else {
+        request.continue();
+      }
+    });
+
+    await randomDelays(15000, 20000);
+
+    await randomDelays(1000, 3000);
+
+    const videoAdCloseBtn = await page.$("rewardCloseButton");
+
+    if (videoAdCloseBtn) {
+      await page.click("rewardCloseButton");
+      console.log("Ad close Button Clicked");
+    }
+
+    await page.waitForSelector("span a", { visible: true });
+    await page.click("span a");
+    console.log("First Button Clicked");
+
+    await randomDelays(3000, 5000);
+
+    await page.waitForSelector("span#verify_button2", { visible: true });
+    await randomDelays(2000, 5000);
+
+    await page.evaluate(() => {
+      document.getElementById("verify_button2").click();
+      console.log("Button 2 Clicked");
+    });
+
+    await randomDelays(10000, 12000);
+
+    await page.waitForSelector("span#verify_button", { visible: true });
+
+    await randomDelays(1000, 2000);
+
+    await page.evaluate(() => {
+      document.getElementById("verify_button")?.click();
+      console.log("3rd Button Clicked");
+    });
+
+    await randomDelays(8000, 10000);
+
+    await page.waitForSelector("a#two_steps_btn", { visible: true });
+
+    await randomDelays(2000, 5000);
+
+    // await page.click("a#two_steps_btn");
+
+    await page.evaluate(() => {
+      document.getElementById("two_steps_btn").click();
+    });
+
+    console.log("Getting the Page@ link...");
+
+    await randomDelays(2000, 4000);
+
+    // await page.screenshot({ path: "sc.png" });
+    // await page.waitForSelector("a.btn", { visible: true });
+
+    const html = await page.content();
+
+    // Close the browser
+    await browser.close();
+    // console.log(html);
+
+    const $ = load(html);
+
+    const link = $("a#two_steps_btn").attr("href");
+
+    const downloadLink = await DownloadLink(link);
+
+    if (downloadLink) {
+      res.status(200).send({ success: true, url: downloadLink });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ success: false, error: error });
   }
 });
 
