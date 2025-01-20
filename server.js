@@ -1,17 +1,12 @@
 import express from "express";
-import http from "http";
 import { load } from "cheerio";
 import chromium from "@sparticuz/chromium";
 import puppeteer from "puppeteer-core";
 import cron from "node-cron";
-import { Server } from "socket.io";
 import DownloadLink from "./Controllers/Series/getDownloadLink.js";
+import { browser } from "./Instances/browser.js";
 
 const app = express();
-
-const server = http.createServer(app);
-
-const io = new Server(server);
 
 // Set the port to listen on (use process.env.PORT for Heroku)
 const PORT = process.env.PORT || 3001;
@@ -22,13 +17,6 @@ app.get("/get-series", async (req, res) => {
     const { slug } = req.query;
     const episode = req.query?.episode ? req.query?.episode : 1;
     const url = `https://uhdmovies.bet/${slug}`;
-
-    // Launch Puppeteer with the chromium binary provided by chrome-aws-lambda
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
 
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -55,7 +43,7 @@ app.get("/get-series", async (req, res) => {
     const html = await page.content();
 
     // Close the browser
-    await browser.close();
+    await page.close();
 
     // res.setHeader("Content-Type", "application/json");
     // res.setHeader("Transfer-Encoding", "chunked");
@@ -128,11 +116,6 @@ app.get("/get-series", async (req, res) => {
 app.get("/get-series-link", async (req, res) => {
   try {
     const { url } = req.query;
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
 
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -216,9 +199,7 @@ app.get("/get-series-link", async (req, res) => {
 
     const html = await page.content();
 
-    // Close the browser
-    await browser.close();
-    // console.log(html);
+      await page.close();
 
     const $ = load(html);
 
@@ -240,13 +221,6 @@ app.get("/generate-link", async (req, res) => {
     console.log("Okay Starting...!");
     const { slug } = req.query;
     const url = `https://uhdmovies.bet/${slug}`;
-
-    // Launch Puppeteer with the chromium binary provided by chrome-aws-lambda
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
 
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -273,7 +247,7 @@ app.get("/generate-link", async (req, res) => {
     const html = await page.content();
 
     // Close the browser
-    await browser.close();
+    await page.close();
 
     // res.setHeader("Content-Type", "application/json");
     // res.setHeader("Transfer-Encoding", "chunked");
@@ -334,17 +308,6 @@ app.get("/generate-link", async (req, res) => {
 
 async function generateLink(url) {
   try {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
-
-    // const [newPagePromise] = [
-    //   new Promise((resolve) =>
-    //     browser.once("targetcreated", (target) => resolve(target.page()))
-    //   ),
-    // ];
 
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -372,6 +335,8 @@ async function generateLink(url) {
     });
 
     await randomDelays(15000, 20000);
+
+    await page.screenshot({path: 'sc.png'});
 
     await randomDelays(1000, 3000);
 
@@ -429,7 +394,7 @@ async function generateLink(url) {
     const html = await page.content();
 
     // Close the browser
-    await browser.close();
+    await page.close();
     // console.log(html);
 
     const $ = load(html);
@@ -456,11 +421,11 @@ function randomDelays(min, max) {
 async function getDownloadLink(url) {
   console.log("Url to visit: ", url);
   try {
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
+    // const browser = await puppeteer.launch({
+    //   args: chromium.args,
+    //   executablePath: await chromium.executablePath(),
+    //   headless: chromium.args,
+    // });
 
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -504,6 +469,8 @@ async function getDownloadLink(url) {
 
     const newHtml = await page.content();
 
+    await page.close();
+
     const $ = load(newHtml);
 
     const link = $("a.btn.btn-warning").attr("href");
@@ -525,11 +492,11 @@ async function FinalLink(link) {
   try {
     const url = `https://driveleech.org${link}`;
 
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
+    // const browser = await puppeteer.launch({
+    //   args: chromium.args,
+    //   executablePath: await chromium.executablePath(),
+    //   headless: chromium.args,
+    // });
 
     // await browser.setCookie(...cookies);
     const page = await browser.newPage();
@@ -632,6 +599,8 @@ async function FinalLink(link) {
     // await page.screenshot({ path: "newPage2.png" });
 
     const html = await page.content();
+
+    await page.close();
 
     const $ = load(html);
 

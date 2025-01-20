@@ -1,16 +1,9 @@
 import { load } from "cheerio";
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
 import randomDelays from "./randomDelays.js";
+import { browser } from "../../Instances/browser.js";
 
 export default async function finalDownloadLink(url) {
   try {
-
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.args,
-    });
 
     // await browser.setCookie(...cookies);
     const page = await browser.newPage();
