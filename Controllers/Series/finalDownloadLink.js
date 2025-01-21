@@ -6,6 +6,7 @@ export default async function finalDownloadLink(url) {
   try {
 
     // await browser.setCookie(...cookies);
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
 
     await page.setUserAgent(
@@ -51,7 +52,7 @@ export default async function finalDownloadLink(url) {
       }
     });
 
-    await page.screenshot({path: 'finalPage.png'})
+    // await page.screenshot({path: 'finalPage.png'})
 
     // await page.waitForSelector("div", { visible: true });
 

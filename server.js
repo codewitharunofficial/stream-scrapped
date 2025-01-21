@@ -154,7 +154,7 @@ app.get("/get-series", async (req, res) => {
 app.get("/get-series-link", async (req, res) => {
   try {
     const { url } = req.query;
-
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -260,6 +260,7 @@ app.get("/generate-link", async (req, res) => {
     const { slug } = req.query;
     const url = `https://uhdmovies.bet/${slug}`;
 
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -346,6 +347,7 @@ app.get("/generate-link", async (req, res) => {
 
 async function generateLink(url) {
   try {
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -463,7 +465,7 @@ async function getDownloadLink(url) {
     //   executablePath: await chromium.executablePath(),
     //   headless: chromium.args,
     // });
-
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -536,6 +538,7 @@ async function FinalLink(link) {
     // });
 
     // await browser.setCookie(...cookies);
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
 
     await page.setUserAgent(

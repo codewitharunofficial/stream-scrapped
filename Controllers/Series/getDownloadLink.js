@@ -6,6 +6,7 @@ import finalDownloadLink from "./finalDownloadLink.js";
 export default async function DownloadLink(url) {
   console.log("Url to visit: ", url);
   try {
+    const browser = await getBrowserInstance();
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
