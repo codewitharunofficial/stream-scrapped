@@ -19,12 +19,10 @@ const io = new Server(server);
 //sockets
 
 io.on("connection", (socket) => {
-  // console.log("A user connected:", socket.id);
+  console.log("A user connected:", socket.id);
 
   // Emit connected event to client
-  socket.on("connected", () => {
-    console.log("A user connected:", socket.id);
-  });
+  socket.emit("connect", {message: "Connected with"});
 
   // Handle custom events from client
   socket.on("customEvent", (data) => {
@@ -494,7 +492,7 @@ async function getDownloadLink(url) {
     await page.waitForSelector("a.btn", {
       visible: true,
     });
-    // await page.screenshot({ path: "newPage.png" });
+    await page.screenshot({ path: "newPage.png" });
 
     await page.$$eval("a.btn", (element) => {
       console.log(element[1].getAttribute("href"));
@@ -639,8 +637,6 @@ async function FinalLink(link) {
     // await page.screenshot({ path: "newPage2.png" });
 
     const html = await page.content();
-
-    await page.close();
 
     const $ = load(html);
 
