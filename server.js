@@ -25,19 +25,10 @@ io.on("connection", (socket) => {
   // Emit connected event to client
   socket.emit("connect", {message: "Connected with"});
 
-  // Handle custom events from client
-  socket.on("customEvent", (data) => {
-    console.log("Received data from client:", data);
-    socket.emit("responseEvent", { message: "Server received your data!" });
-  });
 
   // Handle disconnection
   socket.on("disconnect", (reason) => {
     console.log("User disconnected:", socket.id, "Reason:", reason);
-  });
-
-  socket.on("connect_error", (error) => {
-    console.error("Connection Error:", error.message);
   });
 
   // Handle errors
@@ -374,7 +365,7 @@ async function generateLink(url) {
 
     await randomDelays(15000, 20000);
 
-    await page.screenshot({ path: "sc.png" });
+    // await page.screenshot({ path: "sc.png" });
 
     await randomDelays(1000, 3000);
 

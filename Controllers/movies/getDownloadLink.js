@@ -35,7 +35,7 @@ export async function getMovieDownloadLink(url) {
     await page.waitForSelector("a.btn", {
       visible: true,
     });
-    await page.screenshot({ path: "newPage.png" });
+    // await page.screenshot({ path: "newPage.png" });
 
     await page.$$eval("a.btn", (element) => {
       console.log(element[1].getAttribute("href"));
