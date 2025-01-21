@@ -1,6 +1,6 @@
 import { load } from "cheerio";
 import randomDelays from "./randomDelays.js";
-import { browser } from "../../Instances/browser.js";
+import  getBrowserInstance from "../../Instances/browser.js";
 
 export default async function finalDownloadLink(url) {
   try {

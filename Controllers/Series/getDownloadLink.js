@@ -1,6 +1,7 @@
 import { load } from "cheerio";
-import { browser } from "../../Instances/browser.js";
+import  getBrowserInstance from "../../Instances/browser.js";
 import finalDownloadLink from "./finalDownloadLink.js";
+
 
 export default async function DownloadLink(url) {
   console.log("Url to visit: ", url);

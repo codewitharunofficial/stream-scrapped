@@ -1,15 +1,51 @@
 import express from "express";
 import { load } from "cheerio";
-import chromium from "@sparticuz/chromium";
-import puppeteer from "puppeteer-core";
 import cron from "node-cron";
 import DownloadLink from "./Controllers/Series/getDownloadLink.js";
-import { browser } from "./Instances/browser.js";
+import getBrowserInstance from "./Instances/browser.js";
+import http from "http";
+import { Server } from "socket.io";
 
 const app = express();
 
 // Set the port to listen on (use process.env.PORT for Heroku)
 const PORT = process.env.PORT || 3001;
+
+const server = http.createServer(app);
+
+// Create a new Socket.IO server
+const io = new Server(server);
+
+//sockets
+
+io.on("connection", (socket) => {
+  // console.log("A user connected:", socket.id);
+
+  // Emit connected event to client
+  socket.on("connected", () => {
+    console.log("A user connected:", socket.id);
+  });
+
+  // Handle custom events from client
+  socket.on("customEvent", (data) => {
+    console.log("Received data from client:", data);
+    socket.emit("responseEvent", { message: "Server received your data!" });
+  });
+
+  // Handle disconnection
+  socket.on("disconnect", (reason) => {
+    console.log("User disconnected:", socket.id, "Reason:", reason);
+  });
+
+  socket.on("connect_error", (error) => {
+    console.error("Connection Error:", error.message);
+  });
+
+  // Handle errors
+  socket.on("error", (error) => {
+    console.error("Socket error:", error);
+  });
+});
 
 app.get("/get-series", async (req, res) => {
   try {
@@ -17,6 +53,8 @@ app.get("/get-series", async (req, res) => {
     const { slug } = req.query;
     const episode = req.query?.episode ? req.query?.episode : 1;
     const url = `https://uhdmovies.bet/${slug}`;
+
+    const browser = await getBrowserInstance();
 
     const page = await browser.newPage();
     await page.setUserAgent(
@@ -199,7 +237,7 @@ app.get("/get-series-link", async (req, res) => {
 
     const html = await page.content();
 
-      await page.close();
+    await page.close();
 
     const $ = load(html);
 
@@ -308,7 +346,6 @@ app.get("/generate-link", async (req, res) => {
 
 async function generateLink(url) {
   try {
-
     const page = await browser.newPage();
     await page.setUserAgent(
       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -336,7 +373,7 @@ async function generateLink(url) {
 
     await randomDelays(15000, 20000);
 
-    await page.screenshot({path: 'sc.png'});
+    await page.screenshot({ path: "sc.png" });
 
     await randomDelays(1000, 3000);
 
