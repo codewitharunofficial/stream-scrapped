@@ -6,6 +6,9 @@ import getBrowserInstance from "./Instances/browser.js";
 import http from "http";
 import { Server } from "socket.io";
 import { getMovieDownloadLink } from "./Controllers/movies/getDownloadLink.js";
+import getMovie from "./Controllers/bollywood/getMovie.js";
+import getHome from "./Controllers/bollywood/getHome.js";
+import getSeries from "./Controllers/bollywood/getSeries.js";
 
 const app = express();
 
@@ -17,8 +20,12 @@ const server = http.createServer(app);
 // Create a new Socket.IO server
 const io = new Server(server, {
   cors: {
-    origin: ['http://192.168.142.47:8081', 'http://192.168.142.47:3001', 'https://stream-scrapped.onrender.com'],
-    methods: ['GET', 'POST'],
+    origin: [
+      "http://192.168.142.47:8081",
+      "http://192.168.142.47:3001",
+      "https://stream-scrapped.onrender.com",
+    ],
+    methods: ["GET", "POST"],
   },
 });
 
@@ -255,6 +262,47 @@ app.get("/get-series-link", async (req, res) => {
   }
 });
 
+app.get("/get-movie", async (req, res) => {
+  try {
+    const { slug, quality } = req.query;
+
+    const link = await getMovie(slug, quality);
+    if (link && typeof link === "string") {
+      res.status(200).send({ success: true, url: link });
+    } else {
+      res.status(400).send({ success: false });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ success: false, error: error });
+  }
+});
+
+app.get("/home", async (req, res) => {
+  try {
+    const trendings = await getHome();
+
+    if (trendings) {
+      res.status(200).send({ success: true, videos: trendings });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ success: false, error: error });
+  }
+});
+
+
+app.get('/get-series-details', async (req, res) => {
+  try {
+    const {slug, quality} = req.query;
+    const links = await getSeries(slug, quality);
+
+  } catch (error) {
+    console.log(error)
+  }
+})
+
+
 app.get("/generate-link", async (req, res) => {
   try {
     console.log("Okay Starting...!");
@@ -313,28 +361,8 @@ app.get("/generate-link", async (req, res) => {
         });
       });
 
-      // if (description) {
-      //   res.write(JSON.stringify({ description: description }));
-      // }
-
-      const link = links[links.length - 1].link;
-
-      if (link) {
-        const videoLink = await generateLink(link);
-
-        if (videoLink) {
-          // res.write(JSON.stringify({ link: videoLink }));
-          // res.end();
-          res.status(200).send({
-            success: true,
-            video: {
-              description: description,
-              links: links,
-              url: videoLink,
-            },
-          });
-        }
-      }
+      res.status(200).send({success: true, video: description, links: links});
+      
     }
   } catch (error) {
     console.error("Error during scraping:", error);
@@ -457,9 +485,9 @@ app.get("/get-movie-link", async (req, res) => {
     const { url } = req.query;
 
     const downloadLink = await generateLink(url);
-    if(downloadLink){
+    if (downloadLink) {
       console.log(downloadLink);
-      res.status(200).send({success: true, url: downloadLink});
+      res.status(200).send({ success: true, url: downloadLink });
     }
   } catch (error) {
     console.log(error);
