@@ -15,20 +15,31 @@ const PORT = process.env.PORT || 3001;
 const server = http.createServer(app);
 
 // Create a new Socket.IO server
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: ['http://192.168.142.47:8081', 'http://192.168.142.47:3001', 'https://stream-scrapped.onrender.com'],
+    methods: ['GET', 'POST'],
+  },
+});
 
 //sockets
 
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
-  // Emit connected event to client
-  socket.emit("connect", {message: "Connected with"});
-
+  // Handle custom events from client
+  socket.on("customEvent", (data) => {
+    console.log("Received data from client:", data);
+    socket.emit("responseEvent", { message: "Server received your data!" });
+  });
 
   // Handle disconnection
   socket.on("disconnect", (reason) => {
     console.log("User disconnected:", socket.id, "Reason:", reason);
+  });
+
+  socket.on("connect_error", (error) => {
+    console.error("Connection Error:", error.message);
   });
 
   // Handle errors
@@ -441,6 +452,21 @@ async function generateLink(url) {
   }
 }
 
+app.get("/get-movie-link", async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    const downloadLink = await generateLink(url);
+    if(downloadLink){
+      console.log(downloadLink);
+      res.status(200).send({success: true, url: downloadLink});
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ success: false });
+  }
+});
+
 function randomDelays(min, max) {
   return new Promise((resolve) => {
     setTimeout(resolve, min + Math.random() * (max - min));
@@ -484,7 +510,7 @@ function randomDelays(min, max) {
 //     await page.waitForSelector("a.btn", {
 //       visible: true,
 //     });
-//     await page.screenshot({ path: "newPage.png" });
+//     // await page.screenshot({ path: "newPage.png" });
 
 //     await page.$$eval("a.btn", (element) => {
 //       console.log(element[1].getAttribute("href"));
@@ -629,6 +655,8 @@ function randomDelays(min, max) {
 //     // await page.screenshot({ path: "newPage2.png" });
 
 //     const html = await page.content();
+
+//     await page.close();
 
 //     const $ = load(html);
 

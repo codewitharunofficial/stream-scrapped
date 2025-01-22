@@ -5,12 +5,6 @@ export async function FinalLinkMovie(link) {
     try {
       const url = `https://driveleech.org${link}`;
   
-      // const browser = await puppeteer.launch({
-      //   args: chromium.args,
-      //   executablePath: await chromium.executablePath(),
-      //   headless: chromium.args,
-      // });
-  
       // await browser.setCookie(...cookies);
       const browser = await getBrowserInstance();
       const page = await browser.newPage();

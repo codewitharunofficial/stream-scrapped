@@ -11,7 +11,7 @@ const getBrowserInstance = async () => {
       headless: chromium.headless,
       // ignoreHTTPErrors: true,
     });
-    console.log("Brower Instane Created");
+    console.log("Brower Instance Created");
   }
   return browserInstance;
 };
