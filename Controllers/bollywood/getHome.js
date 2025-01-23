@@ -7,7 +7,7 @@ export default async function getHome () {
         console.log("Okay Starting...!");
     
         // console.log(req.query.slug);
-        const url = `https:gadg8.in`;
+        const url = `https://gadg8.in`;
     
         // Launch Puppeteer with the chromium binary provided by chrome-aws-lambda
         const browser = await getBrowserInstance();
