@@ -1,7 +1,8 @@
+import { load } from "cheerio";
 import getBrowserInstance from "../../Instances/browser.js";
 import randomDelays from "../Series/randomDelays.js";
 
-export default async function getMovie(slug, quality) {
+export default async function getSeriesLink(slug, quality, episode, season) {
   try {
     console.log("Okay Starting...!");
 
@@ -51,27 +52,42 @@ export default async function getMovie(slug, quality) {
 
     // Get the page content as HTML
 
-    await page.waitForSelector("button#loadDataButton", { visible: true });
+    await page.waitForSelector("button#loadDataButtonSeries", {
+      visible: true,
+    });
 
     await page.evaluate(() => {
-      document.getElementById("loadDataButton").click();
+      document.getElementById("loadDataButtonSeries").click();
 
       console.log("Load Button Clicked");
     });
 
     await randomDelays(2000, 5000);
 
-    await page.waitForSelector("div#popupContainer", { visible: true });
+    await page.waitForSelector("div.tvshows-popup-content", { visible: true });
 
-    if (quality === "HD") {
-      await page.click("button#downloadButton_2");
-    } else if (quality === "MD") {
-      await page.click("button#downloadButton_1");
-    } else {
-      await page.click("button#downloadButton_0");
-    }
+    await page.click(`button[data-season='${season}']`);
 
-    // await page.click("button#downloadButton_0");
+    await page.waitForSelector(`div[data-season='${season}']`, {visible: true});
+
+    await page.waitForSelector(` div[data-index='${episode - 1}']`, {visible: true});
+
+    console.log("Found The Div");
+
+    await page.click(`div[data-season='${season}'] div[data-index='${episode}'] button:nth-child(${1})`);
+
+    console.log("Clicked");
+
+    // const btns = await page.$$eval(`div[data-index='${episode}'] button`, (buttons) => {
+    //   buttons.map((btn) => ({
+    //     class: btn.className
+    //   }));
+    // });
+
+    // console.log(btns);
+
+
+    // await page.screenshot({ path: "sc.png" });
 
     await new Promise((resolve) => setTimeout(resolve, 6000));
 
@@ -79,10 +95,8 @@ export default async function getMovie(slug, quality) {
 
     console.log(fileUri);
 
-    // Close the browser
-    await page.close();
-
     return fileUri;
+
   } catch (error) {
     console.error("Error during scraping:", error);
     throw new Error("Something Went wrong",  error);

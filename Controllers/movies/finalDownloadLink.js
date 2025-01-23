@@ -52,59 +52,14 @@ export async function FinalLinkMovie(link) {
         }
       });
   
-      // await page.waitForSelector('div', {visible: true});
-  
-      // await page.evaluate(() => {
-      //   const elems = document.getElementsByName("div");
-      //   console.log(elems);
-      // });
-  
+      
       await page.waitForSelector("a.btn.btn-success", { visible: true });
   
-      // await page.click("div#generate");
+      await page.click("div#generate");
   
       console.log("Clicked Initial");
   
-      // await page.waitForSelector("button#ins", { visible: true });
-  
-      // await page.evaluate(() => {
-      //   document.getElementById("ins").click();
-      // });
-  
-      // while (true) {
-      //   const isDisabled = await page.evaluate(() => {
-      //     const button = document.querySelector('button[id="ins"]');
-      //     return button ? button.getAttribute("disabled") : null;
-      //   });
-  
-      //   if (isDisabled === "") {
-      //     // await page.screenshot({ path: "beforClick.png" });
-      //     console.log("Button is Enabled");
-      //     await randomDelays(1000, 2000);
-      //     await page.evaluate(() => {
-      //       document.getElementById("ins").click();
-      //     });
-      //     await randomDelays(3000, 5000);
-      //     break;
-      //   } else {
-      //     // await page.screenshot({ path: "beforClick.png" });
-  
-      //     await page.evaluate(() => {
-      //       const elems = document.getElementsByName("div");
-      //       // elems;
-      //       console.log(elems);
-      //     });
-      //     await page.click("div#generate");
-  
-      //     await randomDelays(3000, 5000);
-      //   }
-      // }
-  
-      // await page.evaluate(() => {
-      //   const href = await window
-      // })
-  
-      // await page.screenshot({ path: "newPage2.png" });
+     
   
       const html = await page.content();
   
@@ -120,6 +75,6 @@ export async function FinalLinkMovie(link) {
       return videoUrl;
     } catch (error) {
       console.log(error);
-      return error;
+      throw new Error("Something Went wrong",  error);
     }
   }

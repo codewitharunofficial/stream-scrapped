@@ -122,6 +122,6 @@ export default async function finalDownloadLink(url) {
     return videoUrl;
   } catch (error) {
     console.log(error);
-    return error;
+    throw new Error("Something Went wrong",  error);
   }
 }

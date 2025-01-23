@@ -9,6 +9,7 @@ import { getMovieDownloadLink } from "./Controllers/movies/getDownloadLink.js";
 import getMovie from "./Controllers/bollywood/getMovie.js";
 import getHome from "./Controllers/bollywood/getHome.js";
 import getSeries from "./Controllers/bollywood/getSeries.js";
+import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 
 const app = express();
 
@@ -291,17 +292,32 @@ app.get("/home", async (req, res) => {
   }
 });
 
-
-app.get('/get-series-details', async (req, res) => {
+app.get("/get-series-details", async (req, res) => {
   try {
-    const {slug, quality} = req.query;
-    const links = await getSeries(slug, quality);
+    const { slug, quality } = req.query;
+    const episodes = await getSeries(slug, quality);
 
+    if (episodes) {
+      res.status(200).send({ success: true, episodes: episodes });
+    }
   } catch (error) {
-    console.log(error)
+    console.log(error);
+    res.status(500).send({ success: false, error: error });
   }
-})
+});
 
+app.get("/get-episode-link", async (req, res) => {
+  try {
+    const { slug, quality, season, episode } = req.query;
+   const url = await getSeriesLink(slug, quality, episode, season);
+   if(url){
+    res.status(200).send({success: true, url: url});
+   }
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ success: false, error: error });
+  }
+});
 
 app.get("/generate-link", async (req, res) => {
   try {
@@ -361,8 +377,7 @@ app.get("/generate-link", async (req, res) => {
         });
       });
 
-      res.status(200).send({success: true, video: description, links: links});
-      
+      res.status(200).send({ success: true, video: description, links: links });
     }
   } catch (error) {
     console.error("Error during scraping:", error);
@@ -475,7 +490,7 @@ async function generateLink(url) {
     }
   } catch (error) {
     console.log(error);
-    return error;
+    throw new Error("Something Went wrong",  error);
     // res.status(500).send({ success: false, error: error });
   }
 }
@@ -698,7 +713,7 @@ function randomDelays(min, max) {
 //     return videoUrl;
 //   } catch (error) {
 //     console.log(error);
-//     return error;
+//     throw new Error("Something Went wrong",  error);
 //   }
 // }
 

@@ -28,7 +28,7 @@ export default async function getHome () {
         const html = await page.content();
     
         // Close the browser
-        await browser.close();
+        await page.close();
     
         // Load HTML into Cheerio for parsing (you can continue with your scraping logic here)
         if (html) {
@@ -86,6 +86,6 @@ export default async function getHome () {
         }
       } catch (error) {
         console.error("Error during scraping:", error);
-        return error;
+        throw new Error("AN Error Occured: ", error);
       }
 }

@@ -52,7 +52,9 @@ export default async function getSeries(slug, quality) {
 
     // Get the page content as HTML
 
-    await page.waitForSelector("button#loadDataButtonSeries", { visible: true });
+    await page.waitForSelector("button#loadDataButtonSeries", {
+      visible: true,
+    });
 
     await page.evaluate(() => {
       document.getElementById("loadDataButtonSeries").click();
@@ -62,24 +64,49 @@ export default async function getSeries(slug, quality) {
 
     await randomDelays(2000, 5000);
 
-
-
     await page.waitForSelector("div.tvshows-popup-content", { visible: true });
 
     const $ = load(await page.content());
 
     // Close the browser
-    await browser.close();
+    await page.close();
 
-    const links = [];
-     
-     $("div.tvshows-episode-group").each((i, el) => {
-        console.log($(el).html());
-     })
+    const episodes = [];
 
-    return fileUri;
+    $("div.tvshows-accordion-panel").each((i, el) => {
+      const season = $(el).attr("data-season");
+      $(`div[data-season='${season}']`)
+        .find("div.tvshows-episode-group")
+        .each((z, element) => {
+          const episode = $(element).children("h3").text().trim();
+          const resolutions = [];
+          $(element)
+            .find("span.tvshows-size-text")
+            .each((x, span) => {
+              resolutions.push({
+                size: $(span).text().trim(),
+              });
+            });
+
+          episodes.push({
+            season: season,
+            episode: episode,
+            size: resolutions,
+          });
+        });
+    });
+
+   const data = episodes.reduce((acc, episode) => {
+      if(!acc[episode.season]){
+        acc[episode.season] = [];
+      }
+      acc[episode.season].push(episode);
+      return acc
+    }, {});
+
+    return data;
   } catch (error) {
     console.error("Error during scraping:", error);
-    return error;
+    throw new Error("Something Went wrong",  error);
   }
 }
