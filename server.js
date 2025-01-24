@@ -14,7 +14,7 @@ import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 const app = express();
 
 // Set the port to listen on (use process.env.PORT for Heroku)
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 const server = http.createServer(app);
 

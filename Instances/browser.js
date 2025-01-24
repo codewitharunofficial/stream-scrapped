@@ -9,7 +9,7 @@ const getBrowserInstance = async () => {
       args: chromium.args,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
-      // ignoreHTTPErrors: true,
+      waitForInitialPage: true
     });
     console.log("Brower Instance Created");
   }

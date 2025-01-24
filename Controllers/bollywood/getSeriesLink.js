@@ -7,7 +7,7 @@ export default async function getSeriesLink(slug, quality, episode, season) {
     console.log("Okay Starting...!");
 
     console.log(slug);
-    const url = `https:gadg8.in/${slug}`;
+    const url = `https://gadg8.in/${slug}`;
 
     // Launch Puppeteer with the chromium binary provided by chrome-aws-lambda
     const browser = await getBrowserInstance();
@@ -56,6 +56,10 @@ export default async function getSeriesLink(slug, quality, episode, season) {
       visible: true,
     });
 
+    await page.click("button#loadDataButtonSeries");
+
+    console.log("Season Selected");
+
     await page.evaluate(() => {
       document.getElementById("loadDataButtonSeries").click();
 
@@ -69,8 +73,9 @@ export default async function getSeriesLink(slug, quality, episode, season) {
     await page.click(`button[data-season='${season}']`);
 
     await page.waitForSelector(`div[data-season='${season}']`, {visible: true});
+    console.log("Found Episodes list");
 
-    await page.waitForSelector(` div[data-index='${episode - 1}']`, {visible: true});
+    await page.waitForSelector(`div[data-index='${episode - 1}']`, {visible: true});
 
     console.log("Found The Div");
 

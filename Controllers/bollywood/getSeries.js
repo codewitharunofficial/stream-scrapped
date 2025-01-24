@@ -7,7 +7,7 @@ export default async function getSeries(slug, quality) {
     console.log("Okay Starting...!");
 
     console.log(slug);
-    const url = `https:gadg8.in/${slug}`;
+    const url = `https://gadg8.in/${slug}`;
 
     // Launch Puppeteer with the chromium binary provided by chrome-aws-lambda
     const browser = await getBrowserInstance();
