@@ -72,14 +72,21 @@ export default async function getSeriesLink(slug, quality, episode, season) {
 
     await page.click(`button[data-season='${season}']`);
 
-    await page.waitForSelector(`div[data-season='${season}']`, {visible: true});
+    await page.waitForSelector(`div[data-season='${season}']`, {
+      visible: true,
+    });
     console.log("Found Episodes list");
 
-    await page.waitForSelector(`div[data-index='${episode - 1}']`, {visible: true});
+    await page.waitForSelector(
+      `div[data-season='${season}'] div[data-index='${episode - 1}']`,
+      { visible: true }
+    );
 
     console.log("Found The Div");
 
-    await page.click(`div[data-season='${season}'] div[data-index='${episode}'] button:nth-child(${1})`);
+    await page.click(
+      `div[data-season='${season}'] div[data-index='${episode}'] button:nth-child(${1})`
+    );
 
     console.log("Clicked");
 
@@ -91,7 +98,6 @@ export default async function getSeriesLink(slug, quality, episode, season) {
 
     // console.log(btns);
 
-
     // await page.screenshot({ path: "sc.png" });
 
     await new Promise((resolve) => setTimeout(resolve, 6000));
@@ -101,9 +107,8 @@ export default async function getSeriesLink(slug, quality, episode, season) {
     console.log(fileUri);
 
     return fileUri;
-
   } catch (error) {
     console.error("Error during scraping:", error);
-    throw new Error("Something Went wrong",  error);
+    throw new Error("Something Went wrong", error);
   }
 }
