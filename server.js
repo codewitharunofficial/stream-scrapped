@@ -1,4 +1,4 @@
-import express, { request } from "express";
+import express from "express";
 import { load } from "cheerio";
 import cron from "node-cron";
 import DownloadLink from "./Controllers/Series/getDownloadLink.js";
@@ -10,6 +10,7 @@ import getSeries from "./Controllers/bollywood/getSeries.js";
 import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 import dotenv from "dotenv";
 import connectToDB from "./DB/mongoDB.js";
+import request from "request";
 
 dotenv.config();
 
@@ -492,7 +493,7 @@ app.get("/stream", async (req, res) => {
       .pipe(res);
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, message: "Something went wrong" });
+    res.status(500).send({ success: false, message: "Something went wrong", error: error });
   }
 });
 
