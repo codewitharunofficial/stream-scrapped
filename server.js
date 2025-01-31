@@ -485,15 +485,22 @@ app.get("/stream", async (req, res) => {
   try {
     const { url } = req.query;
     if (!url) return res.status(400).send("URL Missing");
-    request({ url: url, encoding: null })
-      .on("response", (resposne) => {
-        res.set("Content-Type", resposne.headers["content-type"]);
-        res.set("Content-Disposition", "inline");
+    request
+      .get(url)
+      .on("response", (response) => {
+        res.setHeader(
+          "Content-Type",
+          response.headers["content-type"] || "video/webm"
+        );
+        res.setHeader("Content-Disposition", "inline"); // Force inline streaming
+        res.setHeader("Cache-Control", "no-store"); // Prevent caching issues
       })
       .pipe(res);
   } catch (error) {
     console.log(error);
-    res.status(500).send({ success: false, message: "Something went wrong", error: error });
+    res
+      .status(500)
+      .send({ success: false, message: "Something went wrong", error: error });
   }
 });
 
