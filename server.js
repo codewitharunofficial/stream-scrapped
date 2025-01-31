@@ -1,60 +1,24 @@
-import express from "express";
+import express, { request } from "express";
 import { load } from "cheerio";
 import cron from "node-cron";
 import DownloadLink from "./Controllers/Series/getDownloadLink.js";
 import getBrowserInstance from "./Instances/browser.js";
-import http from "http";
-import { Server } from "socket.io";
 import { getMovieDownloadLink } from "./Controllers/movies/getDownloadLink.js";
 import getMovie from "./Controllers/bollywood/getMovie.js";
 import getHome from "./Controllers/bollywood/getHome.js";
 import getSeries from "./Controllers/bollywood/getSeries.js";
 import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
+import dotenv from "dotenv";
+import connectToDB from "./DB/mongoDB.js";
+
+dotenv.config();
+
+connectToDB();
 
 const app = express();
 
 // Set the port to listen on (use process.env.PORT for Heroku)
 const PORT = process.env.PORT || 3000;
-
-const server = http.createServer(app);
-
-// Create a new Socket.IO server
-const io = new Server(server, {
-  cors: {
-    origin: [
-      "http://192.168.142.47:8081",
-      "http://192.168.142.47:3001",
-      "https://stream-scrapped.onrender.com",
-    ],
-    methods: ["GET", "POST"],
-  },
-});
-
-//sockets
-
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  // Handle custom events from client
-  socket.on("customEvent", (data) => {
-    console.log("Received data from client:", data);
-    socket.emit("responseEvent", { message: "Server received your data!" });
-  });
-
-  // Handle disconnection
-  socket.on("disconnect", (reason) => {
-    console.log("User disconnected:", socket.id, "Reason:", reason);
-  });
-
-  socket.on("connect_error", (error) => {
-    console.error("Connection Error:", error.message);
-  });
-
-  // Handle errors
-  socket.on("error", (error) => {
-    console.error("Socket error:", error);
-  });
-});
 
 app.get("/get-series", async (req, res) => {
   try {
@@ -309,17 +273,17 @@ app.get("/get-series-details", async (req, res) => {
 app.get("/get-episode-link", async (req, res) => {
   try {
     const { slug, quality, season, episode } = req.query;
-   const url = await getSeriesLink(slug, quality, episode, season);
-   if(url){
-    res.status(200).send({success: true, url: url});
-   }
+    const url = await getSeriesLink(slug, quality, episode, season);
+    if (url) {
+      res.status(200).send({ success: true, url: url });
+    }
   } catch (error) {
     console.log(error);
     res.status(500).send({ success: false, error: error });
   }
 });
 
-app.get("/generate-link", async (req, res) => {
+app.get("/movie-details", async (req, res) => {
   try {
     console.log("Okay Starting...!");
     const { slug } = req.query;
@@ -490,12 +454,12 @@ async function generateLink(url) {
     }
   } catch (error) {
     console.log(error);
-    throw new Error("Something Went wrong",  error);
+    throw new Error("Something Went wrong", error);
     // res.status(500).send({ success: false, error: error });
   }
 }
 
-app.get("/get-movie-link", async (req, res) => {
+app.get("/movie-link", async (req, res) => {
   try {
     const { url } = req.query;
 
@@ -515,6 +479,22 @@ function randomDelays(min, max) {
     setTimeout(resolve, min + Math.random() * (max - min));
   });
 }
+
+app.get("/stream", async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) return res.status(400).send("URL Missing");
+    request({ url: url, encoding: null })
+      .on("response", (resposne) => {
+        res.set("Content-Type", resposne.headers["content-type"]);
+        res.set("Content-Disposition", "inline");
+      })
+      .pipe(res);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ success: false, message: "Something went wrong" });
+  }
+});
 
 // async function getDownloadLink(url) {
 //   console.log("Url to visit: ", url);
