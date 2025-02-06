@@ -11,6 +11,9 @@ import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 import dotenv from "dotenv";
 import connectToDB from "./DB/mongoDB.js";
 import request from "request";
+import puppeteer from "puppeteer-core";
+import chromium from "@sparticuz/chromium";
+import axios from "axios";
 
 dotenv.config();
 
@@ -484,6 +487,7 @@ function randomDelays(min, max) {
 app.get("/stream", async (req, res) => {
   try {
     const { url } = req.query;
+    console.log(url);
     if (!url) return res.status(400).send("URL Missing");
     request
       .get(url)
@@ -492,6 +496,7 @@ app.get("/stream", async (req, res) => {
           "Content-Type",
           response.headers["content-type"] || "video/webm"
         );
+        res.removeHeader("Content-Description");
         res.setHeader("Content-Disposition", "inline"); // Force inline streaming
         res.setHeader("Cache-Control", "no-store"); // Prevent caching issues
       })
@@ -504,206 +509,160 @@ app.get("/stream", async (req, res) => {
   }
 });
 
-// async function getDownloadLink(url) {
-//   console.log("Url to visit: ", url);
-//   try {
-//     // const browser = await puppeteer.launch({
-//     //   args: chromium.args,
-//     //   executablePath: await chromium.executablePath(),
-//     //   headless: chromium.args,
-//     // });
-//     const browser = await getBrowserInstance();
-//     const page = await browser.newPage();
-//     await page.setUserAgent(
-//       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-//     );
-//     await page.setExtraHTTPHeaders({
-//       Accept:
-//         "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-//       Referer: "https://tech.unbloackgames.world",
-//       "Accept-Language": "en-US,en;q=0.9",
-//     });
+app.get('/update-home',  async (req, res) => {
+  try {
+    console.log("Connecting to DB");
+    // await connectToDatabase();
+    console.log("Connected to DB");
 
-//     // await page.setViewport({ width: 1920, height: 1000 });
-//     await page.goto(url, { waitUntil: "networkidle2" });
-//     await page.setRequestInterception(true);
+    const { url, userAgent, cookies } = await getAuthPage();
 
-//     page.on("request", (request) => {
-//       const blockedResources = ["doubleclick.net", "adservice.google.com"];
-//       if (blockedResources.some((url) => request.url().includes(url))) {
-//         console.log("Blocked Ad: ", request.url());
-//         request.abort();
-//       } else {
-//         request.continue();
-//       }
-//     });
+    console.log(cookies);
 
-//     await page.waitForSelector("a.btn", {
-//       visible: true,
-//     });
-//     // await page.screenshot({ path: "newPage.png" });
+    // const url = `https://yupmovie.me`;
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
 
-//     await page.$$eval("a.btn", (element) => {
-//       console.log(element[1].getAttribute("href"));
+    await browser.setCookie(...cookies);
 
-//       element.map((el) => console.log(el.className));
-//     });
+    const page = await browser.newPage();
+    await page.setUserAgent(userAgent);
+    await page.setExtraHTTPHeaders({
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+      Referer: "https://www.google.com",
+      "Accept-Language": "en-US,en;q=0.9",
+    });
 
-//     await page.click("a.btn.btn-warning");
+    console.log("URL: ", url);
 
-//     // const cookies = await browser.cookies();
+    await page.goto(url, { waitUntil: "networkidle0" });
+    // await page.screenshot({ path: "sc.png" });
+    await page.waitForSelector("button#start-task", { visible: true });
+    await randomDelays(1000, 3000);
 
-//     const newHtml = await page.content();
+    await page.click("button#start-task");
+    console.log("First Clicked");
 
-//     await page.close();
+    await page.waitForSelector("button#random-task-0", { visible: true });
 
-//     const $ = load(newHtml);
+    await page.click("button#random-task-0");
+    console.log("Clicked Second");
 
-//     const link = $("a.btn.btn-warning").attr("href");
+    await page.waitForSelector("button#complete-task", { visible: true });
 
-//     console.log("Link: ", link);
+    await page.click("button#complete-task");
 
-//     if (link) {
-//       const videoLink = await FinalLink(link);
-//       console.log(videoLink);
-//       return videoLink;
-//     }
-//   } catch (error) {
-//     console.log(error);
-//     return;
-//   }
-// }
+    await page.evaluate(() => {
+      document.getElementById("complete-task").click();
+    })
 
-// async function FinalLink(link) {
-//   try {
-//     const url = `https://driveleech.org${link}`;
+    // await page.screenshot({path: 'sc.png'});
+    console.log("Third Clicked");
 
-//     // const browser = await puppeteer.launch({
-//     //   args: chromium.args,
-//     //   executablePath: await chromium.executablePath(),
-//     //   headless: chromium.args,
-//     // });
+    await randomDelays(2000, 3000);
 
-//     // await browser.setCookie(...cookies);
-//     const browser = await getBrowserInstance();
-//     const page = await browser.newPage();
+    // await page.screenshot({path: 'sc.png'});
 
-//     await page.setUserAgent(
-//       "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-//     );
-//     await page.setExtraHTTPHeaders({
-//       Accept:
-//         "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-//       Referer: "https://www.google.com",
-//       "Accept-Language": "en-US,en;q=0.9",
-//     });
+    await page.waitForSelector("div.alm-listing.alm-ajax", {
+      visible: true,
+      timeout: 60000,
+    });
 
-//     // await page.setViewport({ width: 1920, height: 1000 });
-//     await page.goto(url, { waitUntil: "networkidle2" });
-//     await page.setRequestInterception(true);
+    const html = await page.content();
+    await browser.close();
 
-//     // await page.screenshot({ path: "sc2.png" });
+    if (html) {
+      const $ = load(html);
+      const trendings = [];
 
-//     page.on("request", (request) => {
-//       const blockedResources = ["doubleclick.net", "adservice.google.com"];
-//       console.log("Request URL : ", request.url());
-//       console.log("Headers: ", request.headers());
-//       if (blockedResources.some((url) => request.url().includes(url))) {
-//         // console.log("Blocked Ad: ", request.url());
-//         request.abort();
-//       } else {
-//         request.continue();
-//       }
-//     });
+      const moviePromises = $("div.alm-listing.alm-ajax")
+        .find("div.alm-item")
+        .map(async (i, el) => {
+          const title = $(el).find("h3").text().trim();
+          let thumbnail = $(el)
+            .find("div.alm-thumbnail-wrapper img")
+            .attr("src");
+          if (!thumbnail || !thumbnail.includes(".jpg")) {
+            thumbnail = $(el)
+              .find("div.alm-thumbnail-wrapper img")
+              .attr("data-lazy-src");
+          }
+          const slugParts = $(el)
+            .find("div.alm-content-wrapper a")
+            .attr("href")
+            .split("/");
+          const slug = slugParts[slugParts.length - 2];
+          const season = $(el)
+            .find("div.alm-update-section p.alm-update-section-p")
+            .text()
+            .trim();
 
-//     let videoUrl;
+          trendings.push({ title, thumbnail, slug, season: season || null });
 
-//     page.on("response", async (response) => {
-//       const url = response.url();
-//       const contentType = response.headers()["content-type"];
+          // await Movie.updateOne(
+          //   { slug },
+          //   { $set: { title, thumbnail, season: season || null } },
+          //   { upsert: true }
+          // );
+        })
+        .get();
 
-//       if (
-//         contentType &&
-//         contentType.startsWith("video" || contentType.endsWith(".mkv"))
-//       ) {
-//         console.log("Video URL from response:", url);
-//         videoUrl = url;
-//       }
-//     });
+      await Promise.all(moviePromises);
 
-//     // await page.waitForSelector('div', {visible: true});
+      await Home.findOneAndUpdate(
+        { type: "Home" },
+        { movies: trendings },
+        { new: true, upsert: true }
+      );
 
-//     // await page.evaluate(() => {
-//     //   const elems = document.getElementsByName("div");
-//     //   console.log(elems);
-//     // });
+        res.status(200).send({ success: true, message: "Home Updated", movies: trendings });
+    }
+    // res.status(200).send({success: true, data: html});
+  } catch (error) {
+    console.error("Error during scraping:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
+});
 
-//     await page.waitForSelector("a.btn.btn-success", { visible: true });
 
-//     // await page.click("div#generate");
+async function getAuthPage() {
+  const options = {
+    method: "POST",
+    url: "https://scrappey-com.p.rapidapi.com/api/v1",
+    headers: {
+      "x-rapidapi-key": "b1c26628e0msh3fbbf13ea24b4abp184561jsna2ebae86e910",
+      "x-rapidapi-host": "scrappey-com.p.rapidapi.com",
+      "Content-Type": "application/json",
+    },
+    data: {
+      cmd: "request.get",
+      url: "https://yupmovie.com",
+    },
+  };
 
-//     console.log("Clicked Initial");
-
-//     // await page.waitForSelector("button#ins", { visible: true });
-
-//     // await page.evaluate(() => {
-//     //   document.getElementById("ins").click();
-//     // });
-
-//     // while (true) {
-//     //   const isDisabled = await page.evaluate(() => {
-//     //     const button = document.querySelector('button[id="ins"]');
-//     //     return button ? button.getAttribute("disabled") : null;
-//     //   });
-
-//     //   if (isDisabled === "") {
-//     //     // await page.screenshot({ path: "beforClick.png" });
-//     //     console.log("Button is Enabled");
-//     //     await randomDelays(1000, 2000);
-//     //     await page.evaluate(() => {
-//     //       document.getElementById("ins").click();
-//     //     });
-//     //     await randomDelays(3000, 5000);
-//     //     break;
-//     //   } else {
-//     //     // await page.screenshot({ path: "beforClick.png" });
-
-//     //     await page.evaluate(() => {
-//     //       const elems = document.getElementsByName("div");
-//     //       // elems;
-//     //       console.log(elems);
-//     //     });
-//     //     await page.click("div#generate");
-
-//     //     await randomDelays(3000, 5000);
-//     //   }
-//     // }
-
-//     // await page.evaluate(() => {
-//     //   const href = await window
-//     // })
-
-//     // await page.screenshot({ path: "newPage2.png" });
-
-//     const html = await page.content();
-
-//     await page.close();
-
-//     const $ = load(html);
-
-//     // console.log($("div#generate").html());
-
-//     videoUrl = $("a.btn.btn-success").attr("href");
-//     console.log("VideoLink: ", videoUrl);
-
-//     await page.close();
-
-//     return videoUrl;
-//   } catch (error) {
-//     console.log(error);
-//     throw new Error("Something Went wrong",  error);
-//   }
-// }
+  try {
+    console.log("Getting Auth URL...");
+    const { data } = await axios.request(options);
+    // console.log(data?.solution?.response);
+    const $ = load(data?.solution?.response);
+    const url = $("a.btn").attr("href");
+    const userAgent = data?.solution?.userAgent;
+    const cookies = data?.solution?.cookies;
+    // console.log("Auth URL: ", url);
+    if (url) {
+      console.log("Got Auth URL...");
+      return { url: url, userAgent: userAgent, cookies: cookies };
+    } else {
+      throw new Error("No URL Found");
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
 
 app.get("/keep-alive", async (req, res) => {
   res.status(200).send({ success: true });
