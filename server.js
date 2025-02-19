@@ -11,7 +11,12 @@ import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 import dotenv from "dotenv";
 import connectToDB from "./DB/mongoDB.js";
 import request from "request";
-import puppeteer from "puppeteer-core";
+let puppeteer;
+if(process.env.NODE_ENV === "production") {
+  puppeteer = await import("puppeteer-core");
+} else {
+  puppeteer = await import("puppeteer");
+}
 import chromium from "@sparticuz/chromium";
 import axios from "axios";
 
@@ -508,6 +513,45 @@ app.get("/stream", async (req, res) => {
       .send({ success: false, message: "Something went wrong", error: error });
   }
 });
+
+  app.get('/stream-live', (req, res) => {
+    // The original HLS URL (this could be dynamically set or passed in the request)
+    const {streamUrl} = req.query;
+    console.log("Url to Stream: ", streamUrl);
+    // const streamUrl = 'https://pv004.zplayer001.com:7054/hls/starsp.m3u8?md6=6i-ZMCjHtZF1kW3LHvuiDQ&expires=1739901342';
+
+    const headers = {
+      "Accept": " */*",
+"Accept-Encoding": "gzip, deflate, br, zstd",
+"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8,ko;q=0.7,hi;q=0.6,ca;q=0.5",
+"Connection": "keep-alive",
+"Host": "puc2.mylife1.top:8088",
+"Origin": "https://es.xtratime.top",
+"Referer": "https://es.xtratime.top/",
+"Sec-Fetch-Dest": "empty",
+"Sec-Fetch-Mode": "cors",
+"Sec-Fetch-Site": "cross-site",
+"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
+"sec-ch-ua": '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
+"sec-ch-ua-mobile": "?0",
+"sec-ch-ua-platform": "Windows"
+    };
+
+    
+  
+    // Request the stream URL and pipe it to the response
+    request
+      .get({url: streamUrl, headers: headers}).on('error', function(err) {console.log(err)})
+      .on('response', function (response) {
+        // Pass the content type from the original response to ensure correct handling
+
+        console.log('Response Status:', response.statusCode);
+        console.log('Response Headers:', response.headers);
+        res.setHeader('Content-Type', response.headers['content-type']);
+        
+      })
+      .pipe(res);  // Send the stream data to the client
+  });
 
 app.get('/update-home',  async (req, res) => {
   try {
