@@ -23,12 +23,12 @@ import axios from "axios";
 
 dotenv.config();
 
-connectToDB();
+// connectToDB();
 
 const app = express();
 
 // Set the port to listen on (use process.env.PORT for Heroku)
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.get("/get-series", async (req, res) => {
   try {
@@ -517,48 +517,54 @@ app.get("/stream", async (req, res) => {
 
 
 const headers = {
-  "Accept": "*/*",
-  "Accept-Encoding": "gzip, deflate, br, zstd",
-  "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8,ko;q=0.7,hi;q=0.6,ca;q=0.5",
-  "Connection": "keep-alive",
-  "Origin": "https://es.xtratime.top",
-  "Referer": "https://es.xtratime.top/",
-  "Sec-Fetch-Dest": "empty",
-  "Sec-Fetch-Mode": "cors",
-  "Sec-Fetch-Site": "cross-site",
-  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36",
-  "sec-ch-ua": '"Not(A:Brand";v="99", "Google Chrome";v="133", "Chromium";v="133"',
-  "sec-ch-ua-mobile": "?0",
-  "sec-ch-ua-platform": "Windows"
+  origin: 'https://web.xtratime.top',
+  referer: 'https://me.webcric.com/',
+  'accept-encoding': 'gzip, deflate, br, zstd',
+  'accept-language': 'en-US,en;q=0.9',
+  'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36',
+  accept: '*/*'
 };
 
 app.get("/proxy/playlist.m3u8", (req, res) => {
   const fullM3U8Url = req.query.url;
-  
-  // console.log("Full M3U8 URL: ", fullM3U8Url
-  // );
-  // Full m3u8 URL from client
+
+  console.log("Full M3U8 URL: ", fullM3U8Url);
 
   if (!fullM3U8Url) {
       return res.status(400).send("Missing m3u8 URL");
   }
 
-  request(fullM3U8Url, (error, response, body) => {
+  // Define headers to mimic a real browser request
+  const options = {
+      url: fullM3U8Url,
+      headers: headers,
+  };
+
+  request(options, (error, response, body) => {
       if (error) {
           console.error("Error fetching m3u8:", error);
           return res.status(500).send("Error fetching playlist");
       }
 
-      // ✅ Replace only "playlist.m3u8" with "media_xxxx.ts"
-      const modifiedBody = body.replace(/(media_\d+\.ts)/g, (match) => {
-        // console.log(fullM3U8Url.replace("playlist.m3u8", match));
+      if (response.statusCode !== 200) {
+          console.error("Failed to fetch M3U8. Status:", response.statusCode);
+          return res.status(response.statusCode).send("Invalid playlist response");
+      }
 
+      console.log("Fetched M3U8, modifying TS URLs...");
+      console.log(response.statusCode);
+
+      // Modify .ts file URLs to go through the proxy
+      const modifiedBody = body.replace(/(media_\d+\.ts)/g, (match) => {
           return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
       });
 
-      // console.log("Modified M3U8: ", modifiedBody);
+      // Set response headers for M3U8
+      res.set({
+          "Content-Type": "application/vnd.apple.mpegurl",
+          "Accept-Ranges": "bytes",
+      });
 
-      res.set("Content-Type", "application/vnd.apple.mpegurl");
       res.send(modifiedBody);
   });
 });
@@ -631,16 +637,6 @@ async function getAuthPage() {
 
 app.get("/keep-alive", async (req, res) => {
   res.status(200).send({ success: true });
-});
-
-cron.schedule("*/5 * * * *", async () => {
-  await fetch("https://stream-scrapped.onrender.com/keep-alive")
-    .then((res) => {
-      console.log("Server is Alive", res);
-    })
-    .catch((err) => {
-      console.log("Error while keeping server alive! ", err);
-    });
 });
 
 // Start the server
