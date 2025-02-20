@@ -1,6 +1,5 @@
 import express from "express";
 import { load } from "cheerio";
-import cron from "node-cron";
 import DownloadLink from "./Controllers/Series/getDownloadLink.js";
 import getBrowserInstance from "./Instances/browser.js";
 import { getMovieDownloadLink } from "./Controllers/movies/getDownloadLink.js";
@@ -9,16 +8,14 @@ import getHome from "./Controllers/bollywood/getHome.js";
 import getSeries from "./Controllers/bollywood/getSeries.js";
 import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 import dotenv from "dotenv";
-import connectToDB from "./DB/mongoDB.js";
 import request from "request";
-import url from "url";
+import cors from "cors";
 let puppeteer;
 if(process.env.NODE_ENV === "production") {
   puppeteer = await import("puppeteer-core");
 } else {
   puppeteer = await import("puppeteer");
 }
-import chromium from "@sparticuz/chromium";
 import axios from "axios";
 
 dotenv.config();
@@ -29,6 +26,14 @@ const app = express();
 
 // Set the port to listen on (use process.env.PORT for Heroku)
 const PORT = process.env.PORT || 3001;
+
+app.use(cors());
+
+app.use((req, res, next) => {
+  res.setHeader("Connection", "keep-alive");
+  res.setHeader("Keep-Alive", "timeout=60"); // Increase to 60 seconds
+  next();
+});
 
 app.get("/get-series", async (req, res) => {
   try {
