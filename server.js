@@ -11,6 +11,7 @@ import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 import dotenv from "dotenv";
 import connectToDB from "./DB/mongoDB.js";
 import request from "request";
+import url from "url";
 let puppeteer;
 if(process.env.NODE_ENV === "production") {
   puppeteer = await import("puppeteer-core");
@@ -531,175 +532,66 @@ const headers = {
   "sec-ch-ua-platform": "Windows"
 };
 
-app.get('/stream-live', async (req, res) => {
-  const { streamUrl } = req.query;
+app.get("/proxy/playlist.m3u8", (req, res) => {
+  const fullM3U8Url = req.query.url;
+  
+  // console.log("Full M3U8 URL: ", fullM3U8Url
+  // );
+  // Full m3u8 URL from client
 
-  if (!streamUrl) {
-      return res.status(400).send("Missing stream URL");
+  if (!fullM3U8Url) {
+      return res.status(400).send("Missing m3u8 URL");
   }
 
-  console.log("Url to Stream: ", streamUrl);
+  request(fullM3U8Url, (error, response, body) => {
+      if (error) {
+          console.error("Error fetching m3u8:", error);
+          return res.status(500).send("Error fetching playlist");
+      }
 
-  try {
-      const response = await axios.get(streamUrl, { headers: headers });
+      // ✅ Replace only "playlist.m3u8" with "media_xxxx.ts"
+      const modifiedBody = body.replace(/(media_\d+\.ts)/g, (match) => {
+        // console.log(fullM3U8Url.replace("playlist.m3u8", match));
 
-      let m3u8Data = response.data;
-
-      // Modify the `.ts` segment URLs to route through our proxy
-      m3u8Data = m3u8Data.replace(/(https?:\/\/[^\s]+)/g, (match) => {
-          return `http://${HOST}:${PORT}/proxy-ts?url=${encodeURIComponent(match)}`;
+          return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
       });
 
-      res.setHeader("Content-Type", "application/vnd.apple.mpegurl");
-      res.send(m3u8Data);
-  } catch (error) {
-      console.error("Error fetching M3U8:", error.message);
-      res.status(500).send("Failed to fetch M3U8 file");
+      // console.log("Modified M3U8: ", modifiedBody);
+
+      res.set("Content-Type", "application/vnd.apple.mpegurl");
+      res.send(modifiedBody);
+  });
+});
+
+// ✅ Serve .ts segments dynamically
+app.get("/proxy/media", (req, res) => {
+  let fullM3U8Url = req.query.url;
+
+  if (!fullM3U8Url) {
+      return res.status(400).send("Missing m3u8 URL");
   }
-});
 
+  // **Fix duplicate query issue**
+  if (fullM3U8Url.includes("?")) {
+      let [baseUrl, queryString] = fullM3U8Url.split("?");
+      let params = new URLSearchParams(queryString); // Parse query params properly
 
-app.get('/proxy-ts', (req, res) => {
-    const tsUrl = req.query.url;
-
-    if (!tsUrl) {
-        return res.status(400).send("Missing TS segment URL");
-    }
-
-    console.log("Fetching TS segment:", tsUrl);
-
-    request
-        .get({ url: tsUrl, headers: headers })
-        .on("error", function (err) {
-            console.error("Error fetching TS segment:", err.message);
-            res.status(500).send("Failed to fetch TS file");
-        })
-        .on("response", function (response) {
-            res.setHeader("Content-Type", "video/mp2t"); // MPEG-TS Content-Type
-            res.setHeader("Transfer-Encoding", "chunked");
-        })
-        .pipe(res);
-});
-
-
-app.get('/update-home',  async (req, res) => {
-  try {
-    console.log("Connecting to DB");
-    // await connectToDatabase();
-    console.log("Connected to DB");
-
-    const { url, userAgent, cookies } = await getAuthPage();
-
-    console.log(cookies);
-
-    // const url = `https://yupmovie.me`;
-    const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-    });
-
-    await browser.setCookie(...cookies);
-
-    const page = await browser.newPage();
-    await page.setUserAgent(userAgent);
-    await page.setExtraHTTPHeaders({
-      Accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-      Referer: "https://www.google.com",
-      "Accept-Language": "en-US,en;q=0.9",
-    });
-
-    console.log("URL: ", url);
-
-    await page.goto(url, { waitUntil: "networkidle0" });
-    // await page.screenshot({ path: "sc.png" });
-    await page.waitForSelector("button#start-task", { visible: true });
-    await randomDelays(1000, 3000);
-
-    await page.click("button#start-task");
-    console.log("First Clicked");
-
-    await page.waitForSelector("button#random-task-0", { visible: true });
-
-    await page.click("button#random-task-0");
-    console.log("Clicked Second");
-
-    await page.waitForSelector("button#complete-task", { visible: true });
-
-    await page.click("button#complete-task");
-
-    await page.evaluate(() => {
-      document.getElementById("complete-task").click();
-    })
-
-    // await page.screenshot({path: 'sc.png'});
-    console.log("Third Clicked");
-
-    await randomDelays(2000, 3000);
-
-    // await page.screenshot({path: 'sc.png'});
-
-    await page.waitForSelector("div.alm-listing.alm-ajax", {
-      visible: true,
-      timeout: 60000,
-    });
-
-    const html = await page.content();
-    await browser.close();
-
-    if (html) {
-      const $ = load(html);
-      const trendings = [];
-
-      const moviePromises = $("div.alm-listing.alm-ajax")
-        .find("div.alm-item")
-        .map(async (i, el) => {
-          const title = $(el).find("h3").text().trim();
-          let thumbnail = $(el)
-            .find("div.alm-thumbnail-wrapper img")
-            .attr("src");
-          if (!thumbnail || !thumbnail.includes(".jpg")) {
-            thumbnail = $(el)
-              .find("div.alm-thumbnail-wrapper img")
-              .attr("data-lazy-src");
-          }
-          const slugParts = $(el)
-            .find("div.alm-content-wrapper a")
-            .attr("href")
-            .split("/");
-          const slug = slugParts[slugParts.length - 2];
-          const season = $(el)
-            .find("div.alm-update-section p.alm-update-section-p")
-            .text()
-            .trim();
-
-          trendings.push({ title, thumbnail, slug, season: season || null });
-
-          // await Movie.updateOne(
-          //   { slug },
-          //   { $set: { title, thumbnail, season: season || null } },
-          //   { upsert: true }
-          // );
-        })
-        .get();
-
-      await Promise.all(moviePromises);
-
-      await Home.findOneAndUpdate(
-        { type: "Home" },
-        { movies: trendings },
-        { new: true, upsert: true }
-      );
-
-        res.status(200).send({ success: true, message: "Home Updated", movies: trendings });
-    }
-    // res.status(200).send({success: true, data: html});
-  } catch (error) {
-    console.error("Error during scraping:", error);
-    res.status(500).send({ success: false, error: error.message });
+      // Reconstruct the URL without duplicate params
+      fullM3U8Url = baseUrl + "?" + params.toString();
   }
+
+  console.log("Corrected TS Segment URL:", fullM3U8Url);
+
+  request(fullM3U8Url)
+      .on("error", (error) => {
+          console.error("Error fetching ts segment:", error);
+          res.status(500).send("Error fetching segment");
+      })
+      .pipe(res);
 });
+
+
+
 
 
 async function getAuthPage() {
