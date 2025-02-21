@@ -584,9 +584,9 @@ app.get("/proxy/playlist.m3u8", (req, res) => {
 
     console.log("Original Playlist:", playlistBody);
 
-    // const baseProxyUrl = "https://vivacious-teirtza-codewitharun-ea9191f4.koyeb.app";
+    const baseProxyUrl = "https://vivacious-teirtza-codewitharun-ea9191f4.koyeb.app";
 
-    const baseProxyUrl = "http://192.168.233.11:3001";
+    // const baseProxyUrl = "http://192.168.233.11:3001";
 
     const baseStreamUrl = fullM3U8Url.split('/playlist.m3u8')[0]; // e.g., https://puc4.mylife1.top:8088/live/webcrichindi
 
