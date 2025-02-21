@@ -530,63 +530,49 @@ const headers = {
   accept: '*/*'
 };
 
-app.get("/proxy/playlist.m3u8", async (req, res) => {
+app.get("/proxy/playlist.m3u8", (req, res) => {
   const fullM3U8Url = req.query.url;
-  if (!fullM3U8Url) return res.status(400).send("Missing m3u8 URL");
-
-  try {
-    const response = await axios.get(fullM3U8Url, {
-      headers: headers,
-      timeout: 30000, // Avoid timeout issues
-    });
-
-    console.log("Fetched M3U8, modifying TS URLs...");
-
-    const modifiedBody = response.data.replace(/(media_\d+\.ts)/g, (match) => {
-      return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
-    });
-
-    res.set({
-      "Content-Type": "application/vnd.apple.mpegurl",
-      "Accept-Ranges": "bytes",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
-      "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
-    });
-
-    res.send(modifiedBody);
-  } catch (error) {
-    console.error("Error fetching m3u8:", error);
-    res.status(500).send("Error fetching playlist");
-  }
-});
-
-
-app.get("/proxy/media", (req, res) => {
-  let fullM3U8Url = req.query.url;
 
   if (!fullM3U8Url) {
     return res.status(400).send("Missing m3u8 URL");
   }
 
-  // **Fix duplicate query issue**
-  if (fullM3U8Url.includes("?")) {
-    let [baseUrl, queryString] = fullM3U8Url.split("?");
-    let params = new URLSearchParams(queryString); // Parse query params properly
-
-    // Reconstruct the URL without duplicate params
-    fullM3U8Url = baseUrl + "?" + params.toString();
-  }
-
-  console.log("Corrected TS Segment URL:", fullM3U8Url);
-
-  request({url: fullM3U8Url, headers: headers})
+  // Fetch and stream response
+  request({ url: fullM3U8Url, headers: headers })
     .on("error", (error) => {
-      console.error("Error fetching ts segment:", error);
-      res.status(500).send("Error fetching segment");
+      console.error("Error fetching m3u8:", error);
+      res.status(500).send("Error fetching playlist");
     })
-    .pipe(res);
+    .pipe(res); // <-- Directly piping response for proper streaming
 });
+
+
+
+// app.get("/proxy/media", (req, res) => {
+//   let fullM3U8Url = req.query.url;
+
+//   if (!fullM3U8Url) {
+//     return res.status(400).send("Missing m3u8 URL");
+//   }
+
+//   // **Fix duplicate query issue**
+//   if (fullM3U8Url.includes("?")) {
+//     let [baseUrl, queryString] = fullM3U8Url.split("?");
+//     let params = new URLSearchParams(queryString); // Parse query params properly
+
+//     // Reconstruct the URL without duplicate params
+//     fullM3U8Url = baseUrl + "?" + params.toString();
+//   }
+
+//   console.log("Corrected TS Segment URL:", fullM3U8Url);
+
+//   request({url: fullM3U8Url, headers: headers})
+//     .on("error", (error) => {
+//       console.error("Error fetching ts segment:", error);
+//       res.status(500).send("Error fetching segment");
+//     })
+//     .pipe(res);
+// });
 
 
 
