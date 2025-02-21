@@ -564,6 +564,8 @@ app.get("/proxy/playlist.m3u8", (req, res) => {
       return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
     });
 
+    console.log("Proxy Response:", response.body); // Log first 100 chars
+
     // Set response headers for M3U8
     res.set({
       "Content-Type": "application/vnd.apple.mpegurl",
