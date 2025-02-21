@@ -530,56 +530,38 @@ const headers = {
   accept: '*/*'
 };
 
-app.get("/proxy/playlist.m3u8", (req, res) => {
+app.get("/proxy/playlist.m3u8", async (req, res) => {
   const fullM3U8Url = req.query.url;
+  if (!fullM3U8Url) return res.status(400).send("Missing m3u8 URL");
 
-  console.log("Full M3U8 URL: ", fullM3U8Url);
-
-  if (!fullM3U8Url) {
-    return res.status(400).send("Missing m3u8 URL");
-  }
-
-  // Define headers to mimic a real browser request
-  const options = {
-    url: fullM3U8Url,
-    headers: headers,
-  };
-
-  request(options, (error, response, body) => {
-    if (error) {
-      console.error("Error fetching m3u8:", error);
-      return res.status(500).send("Error fetching playlist");
-    }
-
-    if (response.statusCode !== 200) {
-      console.error("Failed to fetch M3U8. Status:", response.statusCode);
-      return res.status(response.statusCode).send("Invalid playlist response");
-    }
+  try {
+    const response = await axios.get(fullM3U8Url, {
+      headers: headers,
+      timeout: 30000, // Avoid timeout issues
+    });
 
     console.log("Fetched M3U8, modifying TS URLs...");
-    console.log(response.statusCode);
 
-    // Modify .ts file URLs to go through the proxy
-    const modifiedBody = body.replace(/(media_\d+\.ts)/g, (match) => {
+    const modifiedBody = response.data.replace(/(media_\d+\.ts)/g, (match) => {
       return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
     });
 
-    console.log("Proxy Response:", response.body); // Log first 100 chars
-
-    // Set response headers for M3U8
     res.set({
       "Content-Type": "application/vnd.apple.mpegurl",
       "Accept-Ranges": "bytes",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
+      "Access-Control-Allow-Headers": "Origin, X-Requested-With, Content-Type, Accept, Authorization",
     });
-    res.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
-    res.set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
-
 
     res.send(modifiedBody);
-  });
+  } catch (error) {
+    console.error("Error fetching m3u8:", error);
+    res.status(500).send("Error fetching playlist");
+  }
 });
 
-// ✅ Serve .ts segments dynamically
+
 app.get("/proxy/media", (req, res) => {
   let fullM3U8Url = req.query.url;
 
