@@ -598,7 +598,7 @@ app.get("/proxy/media", (req, res) => {
 
   console.log("Corrected TS Segment URL:", fullM3U8Url);
 
-  request(fullM3U8Url)
+  request({url: fullM3U8Url, headers: headers})
     .on("error", (error) => {
       console.error("Error fetching ts segment:", error);
       res.status(500).send("Error fetching segment");
