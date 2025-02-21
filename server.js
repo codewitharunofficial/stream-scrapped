@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 import request from "request";
 import cors from "cors";
 let puppeteer;
-if(process.env.NODE_ENV === "production") {
+if (process.env.NODE_ENV === "production") {
   puppeteer = await import("puppeteer-core");
 } else {
   puppeteer = await import("puppeteer");
@@ -536,41 +536,44 @@ app.get("/proxy/playlist.m3u8", (req, res) => {
   console.log("Full M3U8 URL: ", fullM3U8Url);
 
   if (!fullM3U8Url) {
-      return res.status(400).send("Missing m3u8 URL");
+    return res.status(400).send("Missing m3u8 URL");
   }
 
   // Define headers to mimic a real browser request
   const options = {
-      url: fullM3U8Url,
-      headers: headers,
+    url: fullM3U8Url,
+    headers: headers,
   };
 
   request(options, (error, response, body) => {
-      if (error) {
-          console.error("Error fetching m3u8:", error);
-          return res.status(500).send("Error fetching playlist");
-      }
+    if (error) {
+      console.error("Error fetching m3u8:", error);
+      return res.status(500).send("Error fetching playlist");
+    }
 
-      if (response.statusCode !== 200) {
-          console.error("Failed to fetch M3U8. Status:", response.statusCode);
-          return res.status(response.statusCode).send("Invalid playlist response");
-      }
+    if (response.statusCode !== 200) {
+      console.error("Failed to fetch M3U8. Status:", response.statusCode);
+      return res.status(response.statusCode).send("Invalid playlist response");
+    }
 
-      console.log("Fetched M3U8, modifying TS URLs...");
-      console.log(response.statusCode);
+    console.log("Fetched M3U8, modifying TS URLs...");
+    console.log(response.statusCode);
 
-      // Modify .ts file URLs to go through the proxy
-      const modifiedBody = body.replace(/(media_\d+\.ts)/g, (match) => {
-          return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
-      });
+    // Modify .ts file URLs to go through the proxy
+    const modifiedBody = body.replace(/(media_\d+\.ts)/g, (match) => {
+      return `/proxy/media?url=${encodeURIComponent(fullM3U8Url.replace("playlist.m3u8", match))}`;
+    });
 
-      // Set response headers for M3U8
-      res.set({
-          "Content-Type": "application/vnd.apple.mpegurl",
-          "Accept-Ranges": "bytes",
-      });
+    // Set response headers for M3U8
+    res.set({
+      "Content-Type": "application/vnd.apple.mpegurl",
+      "Accept-Ranges": "bytes",
+    });
+    res.set("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+    res.set("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
 
-      res.send(modifiedBody);
+
+    res.send(modifiedBody);
   });
 });
 
@@ -579,26 +582,26 @@ app.get("/proxy/media", (req, res) => {
   let fullM3U8Url = req.query.url;
 
   if (!fullM3U8Url) {
-      return res.status(400).send("Missing m3u8 URL");
+    return res.status(400).send("Missing m3u8 URL");
   }
 
   // **Fix duplicate query issue**
   if (fullM3U8Url.includes("?")) {
-      let [baseUrl, queryString] = fullM3U8Url.split("?");
-      let params = new URLSearchParams(queryString); // Parse query params properly
+    let [baseUrl, queryString] = fullM3U8Url.split("?");
+    let params = new URLSearchParams(queryString); // Parse query params properly
 
-      // Reconstruct the URL without duplicate params
-      fullM3U8Url = baseUrl + "?" + params.toString();
+    // Reconstruct the URL without duplicate params
+    fullM3U8Url = baseUrl + "?" + params.toString();
   }
 
   console.log("Corrected TS Segment URL:", fullM3U8Url);
 
   request(fullM3U8Url)
-      .on("error", (error) => {
-          console.error("Error fetching ts segment:", error);
-          res.status(500).send("Error fetching segment");
-      })
-      .pipe(res);
+    .on("error", (error) => {
+      console.error("Error fetching ts segment:", error);
+      res.status(500).send("Error fetching segment");
+    })
+    .pipe(res);
 });
 
 
