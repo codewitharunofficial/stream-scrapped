@@ -10,6 +10,8 @@ import getSeriesLink from "./Controllers/bollywood/getSeriesLink.js";
 import dotenv from "dotenv";
 import request from "request";
 import cors from "cors";
+import Movie from './Models/MovieModel.js';
+import Home from './Models/Home.js';
 let puppeteer;
 if (process.env.NODE_ENV === "production") {
   puppeteer = await import("puppeteer-core");
@@ -17,10 +19,12 @@ if (process.env.NODE_ENV === "production") {
   puppeteer = await import("puppeteer");
 }
 import axios from "axios";
+import chromium from '@sparticuz/chromium';
+import connectToDB from './DB/mongoDB.js';
 
 dotenv.config();
 
-// connectToDB();
+connectToDB();
 
 const app = express();
 
@@ -488,6 +492,104 @@ app.get("/movie-link", async (req, res) => {
     res.status(500).send({ success: false });
   }
 });
+
+app.get('/api/update-home', async (req, res) => {
+  try {
+    // console.log("Connecting to DB");
+    // await connectToDatabase();
+    // console.log("Connected to DB");
+
+    const url = `https://yupmovie.me`;
+    const browser = await puppeteer.launch({
+      args: process.env.NODE_ENV === "production" ? chromium.args : puppeteer.defaultArgs(),
+      executablePath: process.env.NODE_ENV === "production" ? await chromium.executablePath() : puppeteer.executablePath(),
+      headless: process.env.NODE_ENV === "production" ? chromium.headless : true,
+    });
+
+
+    const page = await browser.newPage();
+    await page.setUserAgent(
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    );
+    await page.setExtraHTTPHeaders({
+      'accept-language': 'en-US,en;q=0.9',
+      referer: 'https://yupmovie.me',
+      'upgrade-insecure-requests': '1',
+      accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7'
+    });
+
+
+    console.log(url);
+
+    await page.goto(url, { waitUntil: "networkidle0", timeout: 60000 });
+    // await page.screenshot({ path: "sc.png" });
+
+    // const filePath = 'screenshot.png';
+
+    // await page.screenshot({path: filePath});
+
+    // await browser.close();
+
+    // const fileBuffer = fs.readFileSync(filePath);
+    // res.setHeader('Content-Type', 'image/png');
+    // res.send(fileBuffer);
+   
+
+    const html = await page.content();
+    await browser.close();
+
+    if (html) {
+      const $ = load(html);
+      const trendings = [];
+
+      const moviePromises = $("div.alm-listing.alm-ajax")
+        .find("div.alm-item")
+        .map(async (i, el) => {
+          const title = $(el).find("h3").text().trim();
+          let thumbnail = $(el)
+            .find("div.alm-thumbnail-wrapper img")
+            .attr("src");
+          if (!thumbnail || !thumbnail.includes(".jpg")) {
+            thumbnail = $(el)
+              .find("div.alm-thumbnail-wrapper img")
+              .attr("data-lazy-src");
+          }
+          const slugParts = $(el)
+            .find("div.alm-content-wrapper a")
+            .attr("href")
+            .split("/");
+          const slug = slugParts[slugParts.length - 2];
+          const season = $(el)
+            .find("div.alm-update-section p.alm-update-section-p")
+            .text()
+            .trim();
+
+          trendings.push({ title, thumbnail, slug, season: season || null });
+
+          await Movie.updateOne(
+            { slug },
+            { $set: { title, thumbnail, season: season || null } },
+            { upsert: true }
+          );
+        })
+        .get();
+
+      await Promise.all(moviePromises);
+
+      await Home.findOneAndUpdate(
+        { type: "Home" },
+        { movies: trendings },
+        { new: true, upsert: true }
+      );
+
+      res.status(200).send({ success: true, message: "Home Updated", movies: trendings });
+    }
+    // res.status(200).send({success: true, data: html});
+  } catch (error) {
+    console.error("Error during scraping:", error);
+    res.status(500).send({ success: false, error: error.message });
+  }
+})
 
 function randomDelays(min, max) {
   return new Promise((resolve) => {
